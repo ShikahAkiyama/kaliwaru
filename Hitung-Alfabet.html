@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hitung Nilai Huruf per Kata</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            margin: 0;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-hitung {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-clear {
+            background: #dc3545;
+            color: white;
+        }
+
+        .hasil {
+            margin-top: 15px;
+            font-size: 16px;
+        }
+
+        .kata {
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .total {
+            margin-top: 10px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Hitung Nilai Huruf per Kata</h2>
+
+    <input type="text" id="teks" placeholder="Contoh: ada itu 123 aku">
+
+    <div class="btn-group">
+        <button class="btn-hitung" onclick="hitung()">Hitung</button>
+        <button class="btn-clear" onclick="clearData()">Clear</button>
+    </div>
+
+    <div class="hasil" id="hasil"></div>
+</div>
+
+<script>
+function nilaiKata(kata) {
+    let total = 0;
+    for (let i = 0; i < kata.length; i++) {
+        const kode = kata.charCodeAt(i);
+        if (kode >= 97 && kode <= 122) {
+            total += kode - 96;
+        }
+    }
+    return total;
+}
+
+function hitung() {
+    const teks = document.getElementById("teks").value.toLowerCase();
+    const kataKata = teks.split(/\s+/);
+    let output = "";
+    let totalSemua = 0;
+
+    kataKata.forEach(kata => {
+        const bersih = kata.replace(/[^a-z]/g, "");
+        if (bersih.length > 0) {
+            const nilai = nilaiKata(bersih);
+            totalSemua += nilai;
+            output += `<div class="kata">${bersih} = ${nilai}</div>`;
+        }
+    });
+
+    if (output === "") {
+        output = "<div class='total'>Tidak ada huruf yang dihitung</div>";
+    } else {
+        output += `<div class="total">Total keseluruhan = ${totalSemua}</div>`;
+    }
+
+    document.getElementById("hasil").innerHTML = output;
+}
+
+function clearData() {
+    document.getElementById("teks").value = "";
+    document.getElementById("hasil").innerHTML = "";
+}
+</script>
+
+</body>
+</html>
