@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Kalkulator Air PDAM & Dana Kas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    margin: 0;
+    padding: 15px;
+}
+.container {
+    max-width: 650px;
+    margin: auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+}
+h2 {
+    text-align: center;
+}
+label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+}
+input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    box-sizing: border-box;
+}
+button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 15px;
+    background: #2e86de;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+}
+button:hover {
+    background: #1e6bb8;
+}
+.print {
+    background: #27ae60;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}
+.note {
+    font-size: 13px;
+    color: #555;
+    margin-top: 10px;
+}
+@media print {
+    button { display: none; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>Kalkulator Pembagian Air PDAM</h2>
+
+<label>Meter PDAM Awal (m³)</label>
+<input type="number" id="meterAwal">
+
+<label>Meter PDAM Akhir (m³)</label>
+<input type="number" id="meterAkhir">
+
+<label>Total Tagihan PDAM (Rp)</label>
+<input type="number" id="totalBiaya">
+
+<label>Dana Kas Flat per Kamar (Rp)</label>
+<input type="number" id="kasFlat" placeholder="Contoh: 10000">
+
+<label>Jumlah Kamar</label>
+<input type="number" id="jumlahKamar">
+
+<button onclick="buatInput()">Buat Input Kamar</button>
+
+<div id="inputKamar"></div>
+
+<button onclick="hitung()">Hitung Biaya</button>
+<button class="print" onclick="window.print()">Print / Simpan PDF</button>
+<button id="btnWA" style="background:#25D366" onclick="shareWA()" disabled>
+📲 Share ke WhatsApp
+</button>
+
+<div id="hasil"></div>
+
+<p class="note">
+Catatan:
+<br>• Air pribadi dihitung berdasarkan sub-meter (m³)
+<br>• Air umum dibagi secara persentase
+<br>• Dana kas bersifat flat per kamar
+</p>
+</div>
+
+<script>
+	let hitungValid = false;
+function buatInput() {
+    let jumlah = document.getElementById("jumlahKamar").value;
+    let div = document.getElementById("inputKamar");
+    div.innerHTML = "";
+
+    for (let i = 1; i <= jumlah; i++) {
+        div.innerHTML += `
+            <label>Nama Penghuni Kamar ${i}</label>
+            <input type="text" id="nama${i}" placeholder="Nama penghuni">
+
+            <label>Pemakaian Air Kamar ${i} (m³)</label>
+            <input type="number" id="kamar${i}">
+        `;
+    }
+}
+function lockWA() {
+    hitungValid = false;
+    document.getElementById("btnWA").disabled = true;
+}
+
+document.addEventListener("input", lockWA);
+
+
+function hitung() {
+    let meterAwal  = Number(document.getElementById("meterAwal").value || 0);
+    let meterAkhir = Number(document.getElementById("meterAkhir").value || 0);
+    let totalBiaya = Number(document.getElementById("totalBiaya").value || 0);
+    let kasFlat    = Number(document.getElementById("kasFlat").value || 0);
+    let jumlah     = Number(document.getElementById("jumlahKamar").value || 0);
+
+    let totalPDAM = meterAkhir - meterAwal;
+    if (totalPDAM <= 0) {
+        alert("⚠️ Meter PDAM tidak valid (akhir harus lebih besar dari awal)");
+        lockWA();
+        return;
+    }
+
+    if (totalBiaya <= 0) {
+        alert("⚠️ Total tagihan PDAM harus diisi");
+        lockWA();
+        return;
+    }
+
+    let totalSub = 0;
+    for (let i = 1; i <= jumlah; i++) {
+        totalSub += Number(document.getElementById("kamar"+i).value || 0);
+    }
+
+    // VALIDASI UTAMA
+    if (totalSub > totalPDAM) {
+        alert(
+            "❌ DATA TIDAK VALID\n\n" +
+            "Total sub-meter: " + totalSub + " m³\n" +
+            "Meter PDAM     : " + totalPDAM + " m³\n\n" +
+            "Periksa kembali pencatatan meter!"
+        );
+        lockWA();
+        return;
+    }
+
+    let hargaM3 = totalBiaya / totalPDAM;
+    let airUmumM3 = totalPDAM - totalSub;
+    let airUmumRp = airUmumM3 * hargaM3;
+    let airUmumPerKamar = airUmumRp / jumlah;
+    let persenUmum = (airUmumM3 / totalPDAM) * 100;
+
+    let html = `
+    <table>
+        <tr>
+            <th>Kamar</th>
+            <th>Pakai (m³)</th>
+            <th>Air Pribadi</th>
+            <th>Air Umum</th>
+            <th>Kas</th>
+            <th>Total</th>
+        </tr>
+    `;
+
+    for (let i = 1; i <= jumlah; i++) {
+        let pakai = Number(document.getElementById("kamar"+i).value || 0);
+        let airPribadiRp = pakai * hargaM3;
+        let totalBayar = Math.round(
+            airPribadiRp + airUmumPerKamar + kasFlat
+        );
+
+        html += `
+        <tr>
+            <td>${i}</td>
+            <td>${pakai}</td>
+            <td>${Math.round(airPribadiRp).toLocaleString("id-ID")}</td>
+            <td>${Math.round(airUmumPerKamar).toLocaleString("id-ID")}</td>
+            <td>${kasFlat.toLocaleString("id-ID")}</td>
+            <td><b>${totalBayar.toLocaleString("id-ID")}</b></td>
+        </tr>
+        `;
+    }
+
+    html += `
+        <tr>
+            <th colspan="3">Air Umum</th>
+            <th colspan="3">
+                ${airUmumM3.toFixed(2)} m³ (${persenUmum.toFixed(2)}%)
+            </th>
+        </tr>
+    </table>
+    `;
+
+    document.getElementById("hasil").innerHTML = html;
+
+    // ✅ DATA VALID → BUKA SHARE WA
+    hitungValid = true;
+    document.getElementById("btnWA").disabled = false;
+}
+
+function shareWA() {
+if (!hitungValid) {
+    alert("⚠️ Data belum valid.\nSilakan klik HITUNG BIAYA terlebih dahulu.");
+    return;
+}
+
+    let meterAwal  = Number(document.getElementById("meterAwal").value || 0);
+    let meterAkhir = Number(document.getElementById("meterAkhir").value || 0);
+    let totalBiaya = Number(document.getElementById("totalBiaya").value || 0);
+    let kasFlat    = Number(document.getElementById("kasFlat").value || 0);
+    let jumlah     = Number(document.getElementById("jumlahKamar").value || 0);
+
+    let totalM3 = meterAkhir - meterAwal;
+    let hargaPerM3 = totalBiaya / totalM3;
+
+    let totalSub = 0;
+    for (let i = 1; i <= jumlah; i++) {
+        totalSub += Number(document.getElementById("kamar" + i).value || 0);
+    }
+
+    let airUmumM3 = totalM3 - totalSub;
+    if (airUmumM3 < 0) airUmumM3 = 0;
+
+    let airUmumPerKamar = (airUmumM3 * hargaPerM3) / jumlah;
+    let persenUmum = (airUmumM3 / totalM3) * 100;
+
+    let pesan = `*TAGIHAN AIR PDAM*\n\n`;
+    pesan += `Meter PDAM : ${meterAwal} → ${meterAkhir} m³\n`;
+    pesan += `Air Umum   : ${airUmumM3.toFixed(2)} m³ (${persenUmum.toFixed(2)}%)\n`;
+    pesan += `Kas        : Rp ${kasFlat.toLocaleString("id-ID")} / kamar\n\n`;
+    pesan += `*TOTAL BAYAR:*\n`;
+
+    for (let i = 1; i <= jumlah; i++) {
+        let nama = document.getElementById("nama" + i)?.value || `Kamar ${i}`;
+        let pakai = Number(document.getElementById("kamar" + i).value || 0);
+        let airPribadiRp = pakai * hargaPerM3;
+        let totalBayar = Math.round(
+            airPribadiRp + airUmumPerKamar + kasFlat
+        );
+
+        pesan += `- ${nama}: Rp ${totalBayar.toLocaleString("id-ID")}\n`;
+    }
+
+    pesan += `\n_(Air pribadi + air umum + dana kas)_`;
+
+    window.open("https://wa.me/?text=" + encodeURIComponent(pesan), "_blank");
+}
+</script>
+
+</body>
+</html>
